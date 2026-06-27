@@ -493,7 +493,7 @@ main {
 
       <div class="welcome-card">
         <h2>🤖 Namaste! I'm MechDesign AI</h2>
-        <p>Your intelligent assistant for <strong style="color:var(--teal-2)">DME</strong>, <strong style="color:var(--teal-2)">DTS</strong> &amp; <strong style="color:var(--teal-2)">Engine Components</strong>. Powered by Gemini. I follow Bhandari's methodology and PSG Design Data Book.</p>
+        <p>Your intelligent assistant for <strong style="color:var(--teal-2)">DME</strong>, <strong style="color:var(--teal-2)">DTS</strong> &amp; <strong style="color:var(--teal-2)">Engine Components</strong>. Powered by Groq (Llama 3.3). I follow Bhandari's methodology and PSG Design Data Book.</p>
         <div class="caps-grid">
           <div class="cap-item"><span class="cap-icon">📐</span>Step-by-step numericals (Given → Find → Formula → Result)</div>
           <div class="cap-item"><span class="cap-icon">🧠</span>Concept explanations with formulae and context</div>
@@ -530,7 +530,7 @@ main {
 
 <script>
 /* ─────────────────────────────────────────
-   SYSTEM INSTRUCTION (Gemini style)
+   SYSTEM INSTRUCTION
 ───────────────────────────────────────── */
 const SYSTEM = `You are MechDesign AI, an expert academic assistant for Dr. Rahul Bachute's Mechanical Engineering portal at Ajeenkya DY Patil School of Engineering (ADYPSOE), Pune, affiliated with SPPU.
 
@@ -622,7 +622,7 @@ function saveKey() {
 /* ─────────────────────────────────────────
    GROQ API CALL
 ───────────────────────────────────────── */
-async function callGemini(userText) {
+async function callGroq(userText) {
   history.push({ role: 'user', content: userText });
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -736,12 +736,12 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callGemini(text);
+    const reply = await callGroq(text);
     document.getElementById('typing-row')?.remove();
     addMsg(reply, 'bot');
   } catch(e) {
     document.getElementById('typing-row')?.remove();
-    addMsg(`⚠️ **Error:** ${e.message}<br>Check your Gemini API key and try again.`, 'bot');
+    addMsg(`⚠️ **Error:** ${e.message}<br>Check your Groq API key and try again.`, 'bot');
   }
 
   busy = false;

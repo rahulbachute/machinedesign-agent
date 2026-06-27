@@ -395,9 +395,9 @@ main {
     <p>
       Paste your <strong style="color:var(--teal-2)">Google Gemini API key</strong> to activate MechDesign AI. Your key is stored only in this browser session — never sent anywhere except Google's API.
     </p>
-    <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off"
+    <input type="password" id="api-key-input" placeholder="Paste your Gemini API key here..." autocomplete="off"
       onkeydown="if(event.key==='Enter') saveKey()">
-    <p class="key-error" id="key-error">⚠️ Please enter a valid Gemini API key (starts with AIza…)</p>
+    <p class="key-error" id="key-error">⚠️ Please enter a valid Gemini API key</p>
     <button class="btn-primary" onclick="saveKey()">Activate MechDesign AI →</button>
     <p class="modal-note">
       Get your free key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a><br>
@@ -608,7 +608,7 @@ setInterval(sendHeightToParent, 400);
 function saveKey() {
   const k = document.getElementById('api-key-input').value.trim();
   const err = document.getElementById('key-error');
-  if (!k.startsWith('AIza') || k.length < 20) {
+  if (k.length < 10) {
     err.style.display = 'block';
     return;
   }

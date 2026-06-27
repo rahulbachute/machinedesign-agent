@@ -580,7 +580,12 @@ RESPONSE RULES:
 5. End numerical answers with: 💡 Try this on the portal: [tool name + URL] when a relevant tool exists.
 6. Cite Bhandari's Design of Machine Elements and PSG Design Data Book by name where relevant.
 7. Never hallucinate material properties — direct students to the correct PSG DDK table instead.
-8. IMPORTANT: When providing URLs, write them as plain text only. Never wrap URLs in HTML tags. Example: write https://example.com not <a href="...">link</a>. The UI will convert them automatically.`;
+8. IMPORTANT: When providing URLs, write them as plain text only. Never wrap URLs in HTML tags. Example: write https://example.com not <a href="...">link</a>. The UI will convert them automatically.
+9. CRITICAL: Never use LaTeX notation. Never use backslashes in formulas. Write math in plain Unicode only. Examples:
+   - WRONG: T = (60 \ P) / (2 \ π * N)   RIGHT: T = (60 × P) / (2 × π × N)
+   - WRONG: \sigma, \tau, \frac{a}{b}     RIGHT: σ, τ, (a)/(b)
+   - WRONG: \sqrt{x}                        RIGHT: √x
+   Always use: × for multiply, ÷ for divide, σ τ π μ ω α β δ ε θ for Greek symbols.`;
 
 /* ─────────────────────────────────────────
    STATE
@@ -662,13 +667,35 @@ async function callGroq(userText) {
    FORMAT RESPONSE
 ───────────────────────────────────────── */
 function fmt(text) {
-  // Step 0: Clean AI-generated markdown links with corrupted URLs
+  // Step 0a: Fix LaTeX-style math notation from AI
+  // Convert: T = (60 \ P) / (2 \ π * N)  →  T = (60 × P) / (2 × π × N)
+  text = text.replace(/\\ /g, '× ');          // "\ " → "× "
+  text = text.replace(/\\times/g, '×');        // "\times" → "×"
+  text = text.replace(/\\cdot/g, '·');         // "\cdot" → "·"
+  text = text.replace(/\\pi/g, 'π');           // "\pi" → "π"
+  text = text.replace(/\\sigma/g, 'σ');        // "\sigma" → "σ"
+  text = text.replace(/\\tau/g, 'τ');          // "\tau" → "τ"
+  text = text.replace(/\\mu/g, 'μ');           // "\mu" → "μ"
+  text = text.replace(/\\omega/g, 'ω');        // "\omega" → "ω"
+  text = text.replace(/\\alpha/g, 'α');        // "\alpha" → "α"
+  text = text.replace(/\\beta/g, 'β');         // "\beta" → "β"
+  text = text.replace(/\\delta/g, 'δ');        // "\delta" → "δ"
+  text = text.replace(/\\epsilon/g, 'ε');      // "\epsilon" → "ε"
+  text = text.replace(/\\theta/g, 'θ');        // "\theta" → "θ"
+  text = text.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)'); // rac{a}{b} → (a)/(b)
+  text = text.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');  // \sqrt{x} → √(x)
+  text = text.replace(/\\_/g, '_');             // "\_" → "_"
+  text = text.replace(/\\%/g, '%');             // "\%" → "%"
+  text = text.replace(/\\\*/g, '×');            // "\*" → "×"
+  // Single backslash space used as multiplier: "60 \ P" → "60 × P"
+  text = text.replace(/ \ /g, ' × ');
+
+  // Step 0b: Clean AI-generated markdown links with corrupted URLs
   // Handles: [text](https://url" target="_blank">🔗 Open tool →)
   // and:     [text](https://url)
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
-    // Strip any trailing HTML junk inside the URL portion
     url = url.replace(/"[^"]*"[^)]*$/, '').replace(/"\s*target=.*$/, '').trim();
-    return url; // just return plain URL, formatter below will convert it
+    return url;
   });
 
   // Step 1: Strip stray HTML fragments after URLs

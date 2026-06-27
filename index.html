@@ -579,7 +579,8 @@ RESPONSE RULES:
 4. Tone: warm, academic, encouraging. Address students directly as "you".
 5. End numerical answers with: 💡 Try this on the portal: [tool name + URL] when a relevant tool exists.
 6. Cite Bhandari's Design of Machine Elements and PSG Design Data Book by name where relevant.
-7. Never hallucinate material properties — direct students to the correct PSG DDK table instead.`;
+7. Never hallucinate material properties — direct students to the correct PSG DDK table instead.
+8. IMPORTANT: When providing URLs, write them as plain text only. Never wrap URLs in HTML tags. Example: write https://example.com not <a href="...">link</a>. The UI will convert them automatically.`;
 
 /* ─────────────────────────────────────────
    STATE
@@ -661,17 +662,28 @@ async function callGroq(userText) {
    FORMAT RESPONSE
 ───────────────────────────────────────── */
 function fmt(text) {
+  // Step 1: strip any raw HTML tags the AI accidentally included in URLs
+  // e.g. https://.../" target="_blank">🔗 Open tool → 
+  text = text.replace(/https?:\/\/[^\s"<]+"\s*target="_blank"[^>]*>[\s\S]*?(?=\s|$)/g, m => {
+    const url = m.match(/https?:\/\/[^\s"<]+/)?.[0] || '';
+    return url;
+  });
+
+  // Step 2: escape any literal < > that aren't our own tags yet
+  // (only needed for plain text portions — we do this before adding HTML)
+
+  // Step 3: apply formatting
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`\n]+)`/g, '<code>$1</code>')
     // lines starting with = → formula block
     .replace(/^(=[^\n]+)$/gm, '<div class="formula-block">$1</div>')
-    // portal links → nav pills
-    .replace(/(https:\/\/sites\.google\.com\/view\/drrahulbachute\/[^\s<")\]]+)/g,
+    // portal links → teal nav pills
+    .replace(/(https:\/\/sites\.google\.com\/view\/drrahulbachute\/[^\s<>"\)\]]+)/g,
       '<a class="nav-pill" href="$1" target="_blank">🔗 Open tool →</a>')
-    // other URLs
-    .replace(/(https?:\/\/[^\s<")\]]+)/g,
+    // other URLs → plain teal links
+    .replace(/(https?:\/\/(?!sites\.google\.com\/view\/drrahulbachute)[^\s<>"\)\]]+)/g,
       '<a href="$1" target="_blank" style="color:var(--teal-2)">$1</a>')
     .replace(/\n\n+/g, '<br><br>')
     .replace(/\n/g, '<br>');

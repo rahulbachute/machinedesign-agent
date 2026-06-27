@@ -662,6 +662,19 @@ async function callGroq(userText) {
    FORMAT RESPONSE
 ───────────────────────────────────────── */
 function fmt(text) {
+  // Step 0: Clean AI-generated markdown links with corrupted URLs
+  // Handles: [text](https://url" target="_blank">🔗 Open tool →)
+  // and:     [text](https://url)
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+    // Strip any trailing HTML junk inside the URL portion
+    url = url.replace(/"[^"]*"[^)]*$/, '').replace(/"\s*target=.*$/, '').trim();
+    return url; // just return plain URL, formatter below will convert it
+  });
+
+  // Step 1: Strip stray HTML fragments after URLs
+  text = text.replace(/(https?:\/\/[^\s"<]+)"\s*target="_blank"[^>]*>[\s\S]*?(?=\s|$)/g, '$1');
+
+
   // Step 1: strip any raw HTML tags the AI accidentally included in URLs
   // e.g. https://.../" target="_blank">🔗 Open tool → 
   text = text.replace(/https?:\/\/[^\s"<]+"\s*target="_blank"[^>]*>[\s\S]*?(?=\s|$)/g, m => {

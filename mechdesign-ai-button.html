@@ -9,145 +9,118 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: transparent;
-  height: 100%;
-  overflow: hidden;
+  /* Fully transparent — no background at all */
+  background: transparent !important;
+  margin: 0; padding: 0;
+  width: 100%; height: 80px;
+  overflow: visible;
 }
 
 /* ── FLOATING BUTTON ── */
 #fab {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
-  z-index: 9999;
-  display: flex;
+  bottom: 20px;
+  right: 24px;
+  z-index: 99999;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, #008F7E, #00B4A0);
+  background: linear-gradient(135deg, #008F7E, #00C9B4);
   color: #fff;
   border: none;
   border-radius: 50px;
-  padding: 13px 22px 13px 16px;
+  padding: 12px 20px 12px 14px;
   cursor: pointer;
-  box-shadow: 0 6px 28px rgba(0,180,160,0.45), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,180,160,0.5), 0 2px 8px rgba(0,0,0,0.25);
   font-family: 'Rajdhani', sans-serif;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: pulse-ring 2.5s ease-in-out infinite;
+  animation: glow 2.5s ease-in-out infinite;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
+
 #fab:hover {
-  transform: translateY(-3px) scale(1.04);
-  box-shadow: 0 10px 36px rgba(0,180,160,0.55), 0 4px 12px rgba(0,0,0,0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,180,160,0.6), 0 3px 10px rgba(0,0,0,0.3);
 }
-#fab:active { transform: scale(0.97); }
 
 .fab-icon {
-  width: 34px; height: 34px;
-  background: rgba(255,255,255,0.18);
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.2);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.fab-icon svg { width: 18px; height: 18px; fill: #fff; }
+.fab-icon svg { width: 17px; height: 17px; fill: #fff; }
 
-.fab-label { line-height: 1; }
-.fab-label span {
+.fab-text { line-height: 1.1; }
+.fab-text small {
   display: block;
   font-family: 'Nunito', sans-serif;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
-  opacity: 0.82;
-  letter-spacing: 0.3px;
-  margin-top: 1px;
+  opacity: 0.85;
+  letter-spacing: 0.2px;
 }
 
-/* Gold notification dot */
-#fab::after {
-  content: '';
-  position: absolute;
-  top: -3px; right: -3px;
-  width: 13px; height: 13px;
+/* Gold pulse dot */
+.fab-dot {
+  width: 10px; height: 10px;
   background: #F5B400;
   border-radius: 50%;
   border: 2px solid #fff;
-  animation: blink 2s ease-in-out infinite;
+  position: absolute;
+  top: -2px; right: -2px;
+  animation: blink 1.8s ease-in-out infinite;
 }
 
-@keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 6px 28px rgba(0,180,160,0.45), 0 2px 8px rgba(0,0,0,0.3); }
-  50%       { box-shadow: 0 6px 38px rgba(0,180,160,0.7),  0 2px 8px rgba(0,0,0,0.3); }
+@keyframes glow {
+  0%,100% { box-shadow: 0 4px 20px rgba(0,180,160,0.45), 0 2px 8px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 4px 32px rgba(0,180,160,0.75), 0 2px 8px rgba(0,0,0,0.25); }
 }
 @keyframes blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(0.85); }
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.5; transform:scale(0.8); }
 }
 
-/* ── TOOLTIP ── */
-.tooltip {
-  position: fixed;
-  bottom: 90px;
-  right: 28px;
-  background: #0B1F3A;
-  color: rgba(255,255,255,0.9);
-  font-family: 'Nunito', sans-serif;
-  font-size: 12.5px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0,180,160,0.35);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-  white-space: nowrap;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.25s, transform 0.25s;
-  pointer-events: none;
-}
-.tooltip::after {
-  content: '';
-  position: absolute;
-  bottom: -6px; right: 28px;
-  width: 10px; height: 10px;
-  background: #0B1F3A;
-  border-right: 1px solid rgba(0,180,160,0.35);
-  border-bottom: 1px solid rgba(0,180,160,0.35);
-  transform: rotate(45deg);
-}
-#fab:hover + .tooltip,
-#fab:focus + .tooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ── MOBILE ── */
+/* Mobile */
 @media (max-width: 480px) {
-  #fab {
-    bottom: 18px; right: 16px;
-    padding: 11px 16px 11px 12px;
-    font-size: 15px;
-  }
-  .fab-icon { width: 28px; height: 28px; }
-  .fab-icon svg { width: 15px; height: 15px; }
-  .tooltip { display: none; }
+  #fab { right: 14px; bottom: 14px; padding: 10px 14px 10px 10px; font-size: 14px; }
+  .fab-icon { width: 27px; height: 27px; }
 }
 </style>
 </head>
 <body>
 
-<a id="fab" href="https://rahulbachute.github.io/machinedesign-agent/" target="_blank" rel="noopener">
+<a id="fab"
+   href="https://rahulbachute.github.io/machinedesign-agent/"
+   target="_blank"
+   rel="noopener">
+  <div class="fab-dot"></div>
   <div class="fab-icon">
     <svg viewBox="0 0 24 24">
       <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7 14a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1M6 22l-1-3h14l-1 3H6z"/>
     </svg>
   </div>
-  <div class="fab-label">
+  <div class="fab-text">
     Ask MechDesign AI
-    <span>SM · DME · DTS · Engine Components</span>
+    <small>SM · DME · DTS · Engine Components</small>
   </div>
 </a>
-<div class="tooltip">💬 Ask me anything about Machine Design!</div>
+
+<script>
+  // Tell Google Sites parent frame our height so no white patch appears
+  function notifyParent() {
+    try {
+      window.parent.postMessage({ type: 'resize', height: 80 }, '*');
+    } catch(e) {}
+  }
+  window.addEventListener('load', notifyParent);
+  setInterval(notifyParent, 500);
+</script>
 
 </body>
 </html>

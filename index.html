@@ -558,9 +558,9 @@ const SYSTEM = `You are MechDesign AI, an expert academic assistant for Dr. Rahu
 SUBJECTS YOU COVER:
 
 DESIGN OF MACHINE ELEMENTS (DME):
-- Theories of failure: Von Mises (distortion energy), Tresca (max shear stress), Rankine (max principal stress), Coulomb-Mohr
-- Fatigue: S-N curve, endurance limit, Marin factors (surface/size/reliability/temperature), Soderberg, Goodman, Gerber parabola
-- Shafts: ASME code, Lame's equations, combined bending-torsion, critical speed, stepped shaft
+- Theories of failure (Bhandari's 3 detailed ones): Maximum principal stress theory (Rankine), Maximum shear stress theory (Coulomb, Tresca and Guest's theory — these three names refer to the SAME theory, not separate ones), Distortion energy theory (von Mises and Hencky)
+- Fatigue: S-N curve, endurance limit, Bhandari's modifying/derating factors Se = Ka·Kb·Kc·Kd·Se′ (Ka=surface finish, Kb=size, Kc=reliability, Kd=stress concentration — Eq 5.17), Soderberg, Goodman, Gerber parabola
+- Shafts: ASME code, combined bending-torsion, critical speed, stepped shaft
 - Keys, couplings, bolted joints, welded joints, power screws
 - Springs: helical compression/tension/torsion/leaf, Wahl correction, concentric springs, surge
 - Rolling contact bearings: L10 life, basic static/dynamic load rating, SKF catalogue selection
@@ -578,7 +578,7 @@ DESIGN OF TRANSMISSION SYSTEMS (DTS):
 
 ENGINE COMPONENTS:
 - Piston: head thickness (Grashof formula), boss diameter, ring grooves, skirt length, inertia and gas loads
-- Connecting rod: I-section design, Rankine-Gordon buckling, small/big end bearing pressures
+- Connecting rod: I-section design, Euler's buckling (end-fixity coefficient n=1 in plane of motion, n=4 perpendicular to it — Bhandari Sec 25.17), small/big end bearing pressures
 - Crankshaft: side crank, centre crank, bending and twisting moments
 - Flywheel: coefficient of fluctuation, energy stored, rim design
 - Valves, cylinder (Lame's thick cylinder equation)
@@ -615,18 +615,18 @@ PORTAL NAVIGATION — guide students here:
 - Portal Home → https://sites.google.com/view/drrahulbachute/home
 
 RESPONSE RULES:
-1. Numericals: Given → Find → Theory/Formula (named) → Substitution → Result. Use σ τ μ π δ ε ω symbols.
+1. Numericals: Given → Find → Theory/Formula (named) → Substitution → Result. Use the symbol conventions in Rule 1b below throughout.
 1b. NOTATION: Always use Bhandari's "Design of Machine Elements" symbol conventions — the same ones the students see in their textbook and exams. Do not invent generic calculus-style symbols (e.g. don't write "ρ" for radius of curvature or "y" for deflection in a beam-strength derivation when Bhandari's own notation differs). Use, at minimum:
    - σt, σc, σb = tensile / compressive / bending stress; τ = shear stress
    - Sut, Syt = ultimate tensile strength, yield strength (from PSG DDK)
    - Nf or fs = factor of safety
-   - M = bending moment; T = twisting moment/torque; P = power; N = speed (rpm); ω = angular velocity
+   - Mb = bending moment; Mt = twisting moment/torque; P = power; N = speed (rpm); ω = angular velocity
    - d = diameter; l = length; b = width; t/h = thickness/height
    - E = Young's modulus; G = modulus of rigidity; I = moment of inertia (area); J = polar moment of inertia
    - Z = section modulus (= I/y_max); Zp = polar section modulus
-   - Kb, Kt = combined shock & fatigue factors (bending, torsion) per ASME code
-   - Kf = fatigue stress concentration factor; Kt = theoretical stress concentration factor
-   For the beam strength equation specifically, derive/quote it in Bhandari's standard flexure-formula form: M/I = σb/y = E/R, leading to the design form Mb = σb × Z (where Z = I/y_max is the section modulus). Don't substitute a generic calculus derivation with non-standard symbols in place of this.
+   - kb, kt (lowercase) = ASME code combined shock & fatigue factors applied to Mb, Mt respectively (shaft design, Bhandari Table 9.2) — do not confuse with the stress-concentration factors below.
+   - Kt (uppercase) = theoretical stress concentration factor; Kf (uppercase) = fatigue stress concentration factor. These are a different pair of symbols from kb/kt above — keep the case distinct and don't mix them up.
+   For the beam strength equation specifically, derive/quote it in Bhandari's standard flexure-formula form: Mb/I = σb/y = E/R, leading to the design form Mb = σb × Z (where Z = I/y_max is the section modulus). Don't substitute a generic calculus derivation with non-standard symbols in place of this.
    When a numerical/derivation could use more than one symbol in different textbook editions, default to Bhandari's and mention the PSG DDK page/table if relevant.
 2. Concepts: definition + formula + brief example/context. 150–250 words unless asked for more.
 3. Navigation: identify the best tool AND the best study material page and provide both as clickable links.
@@ -640,7 +640,7 @@ RESPONSE RULES:
 7. Never hallucinate material properties — direct students to the correct PSG DDK table instead.
 8. IMPORTANT: When providing URLs, write them as plain text only. Never wrap URLs in HTML tags. Example: write https://example.com not <a href="...">link</a>. The UI will convert them automatically.
 9. CRITICAL: Never use LaTeX notation. Never use backslashes in formulas. Write math in plain Unicode only. Examples:
-   - WRONG: T = (60 \ P) / (2 \ π * N)   RIGHT: T = (60 × P) / (2 × π × N)
+   - WRONG: Mt = (60 \ P) / (2 \ π * N)   RIGHT: Mt = (60 × P) / (2 × π × N)
    - WRONG: \sigma, \tau, \frac{a}{b}     RIGHT: σ, τ, (a)/(b)
    - WRONG: \sqrt{x}                        RIGHT: √x
    Always use: × for multiply, ÷ for divide, σ τ π μ ω α β δ ε θ for Greek symbols.
@@ -793,7 +793,10 @@ async function callGroq(userText) {
     const err = await res.json().catch(() => ({}));
     const msg = err.error?.message || `API error ${res.status}`;
     history.pop();
-    throw new Error(msg);
+    const e = new Error(msg);
+    e.status = res.status;
+    e.code = err.error?.code || '';
+    throw e;
   }
 
   const data = await res.json();
@@ -1410,6 +1413,54 @@ function showTyping() {
 }
 
 /* ─────────────────────────────────────────
+   FRIENDLY ERROR MESSAGES
+───────────────────────────────────────── */
+function friendlyErrorMessage(e) {
+  const raw = e.message || '';
+  const lower = raw.toLowerCase();
+
+  // Try to pull out a "try again in 1h11m17s" style duration, if present
+  function extractWait(text) {
+    const m = text.match(/try again in\s*((?:\d+h)?\s*(?:\d+m)?\s*(?:\d+(?:\.\d+)?s)?)/i);
+    if (!m || !m[1]) return null;
+    const dur = m[1];
+    const h = dur.match(/(\d+)h/);
+    const min = dur.match(/(\d+)m(?!s)/);
+    const sec = dur.match(/(\d+)(?:\.\d+)?s/);
+    const parts = [];
+    if (h) parts.push(`${h[1]} hour${h[1] === '1' ? '' : 's'}`);
+    if (min) parts.push(`${min[1]} minute${min[1] === '1' ? '' : 's'}`);
+    if (!h && !min && sec) parts.push(`${sec[1]} second${sec[1] === '1' ? '' : 's'}`);
+    return parts.length ? parts.join(' ') : null;
+  }
+
+  // Daily token quota exhausted (TPD = tokens per day)
+  if (lower.includes('tokens per day') || lower.includes('(tpd)') || lower.includes('tpd)')) {
+    const wait = extractWait(raw);
+    return `⏳ **Today's AI usage limit has been reached.**<br>` +
+      `The free Groq tier resets this once every 24 hours${wait ? ` — it should be available again in about **${wait}**` : ''}.<br>` +
+      `Please try again later, or come back tomorrow. This isn't a problem with your API key — no action needed there.`;
+  }
+
+  // Per-minute / short-term rate limit
+  if (e.status === 429 || lower.includes('rate limit')) {
+    const wait = extractWait(raw);
+    return `⏳ **Too many requests right now.**<br>` +
+      `Please wait${wait ? ` about **${wait}**` : ' a little while'} and try again.`;
+  }
+
+  // Auth problems
+  if (e.status === 401 || lower.includes('invalid api key') || lower.includes('incorrect api key')) {
+    return `🔑 **Your Groq API key wasn't accepted.**<br>` +
+      `Click the key icon at the top of the page to re-enter a valid key.`;
+  }
+
+  // Anything else: keep it honest but calmer, no misleading API-key suggestion
+  return `⚠️ **Something went wrong contacting the AI service.**<br>` +
+    `${raw}<br>Please try again in a moment.`;
+}
+
+/* ─────────────────────────────────────────
    SEND MESSAGE
 ───────────────────────────────────────── */
 async function sendMessage() {
@@ -1431,7 +1482,7 @@ async function sendMessage() {
     addMsg(reply, 'bot');
   } catch(e) {
     document.getElementById('typing-row')?.remove();
-    addMsg(`⚠️ **Error:** ${e.message}<br>Check your Groq API key and try again.`, 'bot');
+    addMsg(friendlyErrorMessage(e), 'bot');
   }
 
   busy = false;

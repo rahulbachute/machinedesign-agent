@@ -614,6 +614,18 @@ PORTAL NAVIGATION — guide students here:
 
 RESPONSE RULES:
 1. Numericals: Given → Find → Theory/Formula (named) → Substitution → Result. Use σ τ μ π δ ε ω symbols.
+1b. NOTATION: Always use Bhandari's "Design of Machine Elements" symbol conventions — the same ones the students see in their textbook and exams. Do not invent generic calculus-style symbols (e.g. don't write "ρ" for radius of curvature or "y" for deflection in a beam-strength derivation when Bhandari's own notation differs). Use, at minimum:
+   - σt, σc, σb = tensile / compressive / bending stress; τ = shear stress
+   - Sut, Syt = ultimate tensile strength, yield strength (from PSG DDK)
+   - Nf or fs = factor of safety
+   - M = bending moment; T = twisting moment/torque; P = power; N = speed (rpm); ω = angular velocity
+   - d = diameter; l = length; b = width; t/h = thickness/height
+   - E = Young's modulus; G = modulus of rigidity; I = moment of inertia (area); J = polar moment of inertia
+   - Z = section modulus (= I/y_max); Zp = polar section modulus
+   - Kb, Kt = combined shock & fatigue factors (bending, torsion) per ASME code
+   - Kf = fatigue stress concentration factor; Kt = theoretical stress concentration factor
+   For the beam strength equation specifically, derive/quote it in Bhandari's standard flexure-formula form: M/I = σb/y = E/R, leading to the design form Mb = σb × Z (where Z = I/y_max is the section modulus). Don't substitute a generic calculus derivation with non-standard symbols in place of this.
+   When a numerical/derivation could use more than one symbol in different textbook editions, default to Bhandari's and mention the PSG DDK page/table if relevant.
 2. Concepts: definition + formula + brief example/context. 150–250 words unless asked for more.
 3. Navigation: identify the best tool AND the best study material page and provide both as clickable links.
 4. Tone: warm, academic, encouraging. Address students directly as "you".
@@ -1177,16 +1189,41 @@ const DIAGRAMS = {
     </div>`,
 };
 
+// Generic words that appear in almost every diagram name and shouldn't
+// count as a "match" on their own (this was the root cause of the
+// beam-strength-equation query incorrectly rendering the fatigue diagram —
+// "diagram" alone matched the first key in the object).
+const DIAGRAM_STOPWORDS = new Set(['diagram','diagrams','design','drawing','chart','figure','plot','sketch','schematic','curve','curves','of','and','the','with','for','equation']);
+
+function normalizeDiagramKey(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function renderDiagram(tag) {
   // tag like "📊 [Diagram: soderberg-goodman fatigue diagram]"
   const match = tag.match(/\[Diagram:\s*([^\]]+)\]/i);
   if (!match) return tag;
-  const key = match[1].toLowerCase().trim();
-  // find best matching diagram
-  const found = Object.keys(DIAGRAMS).find(k => 
-    key.includes(k) || k.split(' ').some(w => w.length > 4 && key.includes(w))
-  );
-  return found ? DIAGRAMS[found] : `<div class="diagram-card"><div class="diagram-title">📊 ${match[1]}</div><p style="color:var(--muted);font-size:12px;padding:8px">Diagram: ${match[1]}</p></div>`;
+  const rawKey = match[1].toLowerCase().trim();
+  const normKey = normalizeDiagramKey(rawKey);
+
+  // 1) Exact match (ignoring punctuation/extra whitespace) — this is what
+  //    the system prompt asks the model for ("copy-paste exactly").
+  let found = Object.keys(DIAGRAMS).find(k => normalizeDiagramKey(k) === normKey);
+
+  // 2) Fallback: only match if at least 2 distinctive (non-stopword,
+  //    length > 3) words overlap. A single generic word is not enough.
+  if (!found) {
+    const keyWords = new Set(normKey.split(' ').filter(w => w.length > 3 && !DIAGRAM_STOPWORDS.has(w)));
+    let bestScore = 0, bestKey = null;
+    for (const k of Object.keys(DIAGRAMS)) {
+      const kWords = normalizeDiagramKey(k).split(' ').filter(w => w.length > 3 && !DIAGRAM_STOPWORDS.has(w));
+      const overlap = kWords.filter(w => keyWords.has(w)).length;
+      if (overlap > bestScore) { bestScore = overlap; bestKey = k; }
+    }
+    if (bestScore >= 2) found = bestKey;
+  }
+
+  return found ? DIAGRAMS[found] : `<div class="diagram-card"><div class="diagram-title">📊 ${match[1]}</div><p style="color:var(--muted);font-size:12px;padding:8px">No preset diagram available yet for "${match[1]}" — check the portal study material for a figure on this topic.</p></div>`;
 }
 
 

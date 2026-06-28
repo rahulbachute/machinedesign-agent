@@ -630,9 +630,9 @@ RESPONSE RULES:
    - WRONG: \sigma, \tau, \frac{a}{b}     RIGHT: σ, τ, (a)/(b)
    - WRONG: \sqrt{x}                        RIGHT: √x
    Always use: × for multiply, ÷ for divide, σ τ π μ ω α β δ ε θ for Greek symbols.
-10. NEVER draw ASCII art diagrams, ASCII tables with x and - characters, or text-based charts. They render as garbage in the UI. Instead:
-    - For diagrams: describe the diagram in 1-2 clear sentences, then say "📊 [Diagram: name of diagram]" on its own line. The UI will render a proper SVG diagram.
-    Use EXACTLY these tags (copy-paste exactly):
+10. NEVER draw ASCII art diagrams, ASCII tables with x/× and - characters, box-drawing characters, or any text-based "picture". They render as garbage in the UI — not even inside code fences. This applies even for topics that don't have a matching diagram tag below: in that case, simply skip the diagram and explain the concept in clear prose/formulas only. Do not improvise a text drawing as a substitute.
+    - For diagrams that DO have a tag: describe the diagram in 1-2 clear sentences, then say "📊 [Diagram: name of diagram]" on its own line. The UI will render a proper SVG diagram.
+    Use EXACTLY these tags (copy-paste exactly) — these are the ONLY diagrams available:
     - Fatigue (Soderberg/Goodman/Gerber): 📊 [Diagram: soderberg-goodman fatigue diagram]
     - SFD and BMD: 📊 [Diagram: sfd bmd diagram]
     - Gear tooth Lewis: 📊 [Diagram: gear tooth profile lewis]
@@ -1177,7 +1177,7 @@ const DIAGRAMS = {
     </div>`,
 };
 
-function renderDiagramfunction renderDiagram(tag) {
+function renderDiagram(tag) {
   // tag like "📊 [Diagram: soderberg-goodman fatigue diagram]"
   const match = tag.match(/\[Diagram:\s*([^\]]+)\]/i);
   if (!match) return tag;
@@ -1236,6 +1236,19 @@ function fmt(text) {
   // Step 2: escape any literal < > that aren't our own tags yet
   // (only needed for plain text portions — we do this before adding HTML)
 
+  // Step 2b: Strip any triple-backtick fenced code blocks entirely.
+  // The model is told never to draw ASCII art, but if it slips and wraps
+  // it in a ``` fence anyway, drop the whole block rather than show
+  // raw backticks + box-drawing junk.
+  text = text.replace(/```[\s\S]*?```/g, '');
+
+  // Step 2c: Drop any remaining line that is pure ASCII/Unicode "box art"
+  // — sequences of box-drawing, ruler, or pseudo-graphic characters with no
+  // real words. Covers the various symbols models use for fake diagrams
+  // (x, ×, -, +, |, ., v, ^, =, #, *, box-drawing block U+2500–U+257F)
+  // so long as the line has no run of 3+ alphabetic characters (a real word).
+  text = text.replace(/^(?!.*[A-Za-z]{3,})[\sx×\-+|.v^=#*\u2500-\u257F]{6,}$/gm, '');
+
   // Step 3: apply formatting
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -1253,9 +1266,8 @@ function fmt(text) {
     .replace(/\n/g, '<br>')
     // Render 📊 diagram tags
     .replace(/📊\s*\[Diagram:[^\]]+\]/gi, m => renderDiagram(m))
-    // Block any remaining ASCII art (lines of dashes/x chars)
-    .replace(/^[x\-\+\|]{6,}.*$/gm, '')
-    .replace(/^\s*\.\.\s*$/gm, '');
+    // Collapse any leftover blank <br><br> runs left behind by stripped blocks
+    .replace(/(<br>\s*){3,}/g, '<br><br>');
 }
 
 /* ─────────────────────────────────────────

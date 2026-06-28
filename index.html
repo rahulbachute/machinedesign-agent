@@ -420,6 +420,7 @@ main {
     <span class="tag tag-teal">DME</span>
     <span class="tag tag-teal">DTS</span>
     <span class="tag tag-gold">Engine</span>
+    <button onclick="clearKey()" title="Change API Key" style="background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;padding:2px 8px;cursor:pointer;font-family:var(--font-b);margin-left:4px;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.45)'">⚙️ Key</button>
   </div>
 </header>
 
@@ -594,9 +595,13 @@ PORTAL NAVIGATION — guide students here:
 RESPONSE RULES:
 1. Numericals: Given → Find → Theory/Formula (named) → Substitution → Result. Use σ τ μ π δ ε ω symbols.
 2. Concepts: definition + formula + brief example/context. 150–250 words unless asked for more.
-3. Navigation: identify the best tool and provide its direct URL as a clickable link.
+3. Navigation: identify the best tool AND the best study material page and provide both as clickable links.
 4. Tone: warm, academic, encouraging. Address students directly as "you".
-5. End numerical answers with: 💡 Try this on the portal: [tool name + URL] when a relevant tool exists.
+5. ALWAYS end your response with a 📚 PORTAL RESOURCES section listing ALL relevant links from the portal for that topic. Format:
+   📚 Portal Resources:
+   • 🔧 [Tool name] → URL  (for interactive calculators/games)
+   • 📖 [Notes/Material name] → URL  (for study material)
+   • 📝 [Question Bank/Papers name] → URL  (for practice)
 6. Cite Bhandari's Design of Machine Elements and PSG Design Data Book by name where relevant.
 7. Never hallucinate material properties — direct students to the correct PSG DDK table instead.
 8. IMPORTANT: When providing URLs, write them as plain text only. Never wrap URLs in HTML tags. Example: write https://example.com not <a href="...">link</a>. The UI will convert them automatically.
@@ -604,7 +609,58 @@ RESPONSE RULES:
    - WRONG: T = (60 \ P) / (2 \ π * N)   RIGHT: T = (60 × P) / (2 × π × N)
    - WRONG: \sigma, \tau, \frac{a}{b}     RIGHT: σ, τ, (a)/(b)
    - WRONG: \sqrt{x}                        RIGHT: √x
-   Always use: × for multiply, ÷ for divide, σ τ π μ ω α β δ ε θ for Greek symbols.`;
+   Always use: × for multiply, ÷ for divide, σ τ π μ ω α β δ ε θ for Greek symbols.
+
+TOPIC → PORTAL RESOURCE MAPPING (always include ALL relevant links for the topic):
+
+GEARS (spur, helical, bevel, worm, gear trains, gearboxes):
+  🔧 Gear Transmission Lab → https://sites.google.com/view/drrahulbachute/interactive-labs/gear-transmission-basics
+  🔧 Gear Design Challenge Game → https://sites.google.com/view/drrahulbachute/technical-games/gear-design-challenge-time-attack
+  📖 DTS Study Material → https://sites.google.com/view/drrahulbachute/transmission-systems/study-material
+  📝 DTS Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/transmission-systems/assignments-question-bank
+  📝 DTS Past SPPU Papers → https://sites.google.com/view/drrahulbachute/transmission-systems/past-sppu-question-papers
+
+SHAFTS & KEYS:
+  🔧 Shaft Design Calculator → https://sites.google.com/view/drrahulbachute/interactive-labs/shaft-design-calculator
+  📖 DME Study Material → https://sites.google.com/view/drrahulbachute/machine-elements/study-material
+  📝 DME Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/machine-elements/assignments-question-bank
+  📝 DME Past SPPU Papers → https://sites.google.com/view/drrahulbachute/machine-elements/past-sppu-question-papers
+
+SPRINGS:
+  🔧 Spring Design Calculator → https://sites.google.com/view/drrahulbachute/interactive-labs/spring-design-calculator
+  📖 DME Study Material → https://sites.google.com/view/drrahulbachute/machine-elements/study-material
+  📝 DME Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/machine-elements/assignments-question-bank
+
+FATIGUE & THEORIES OF FAILURE:
+  🔧 Fatigue Design Calculator → https://sites.google.com/view/drrahulbachute/interactive-labs/fatigue-design-calculator
+  📖 DME Study Material → https://sites.google.com/view/drrahulbachute/machine-elements/study-material
+  📖 Solid Mechanics - Theories of Failure → https://sites.google.com/view/drrahulbachute/solid-mechanics/solved-pyqs-unit-wise/unit-v-principal-stresses-theories-of-failure
+  📝 DME Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/machine-elements/assignments-question-bank
+
+BEARINGS:
+  🔧 Bearing Master Game → https://sites.google.com/view/drrahulbachute/technical-games/bearing_master
+  📖 DME Study Material → https://sites.google.com/view/drrahulbachute/machine-elements/study-material
+  📝 DME Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/machine-elements/assignments-question-bank
+
+ENGINE COMPONENTS (piston, connecting rod, crankshaft, flywheel, valves):
+  📖 Engine Components → https://sites.google.com/view/drrahulbachute/engine-components
+  📖 IC Engine Add-on Course → https://sites.google.com/view/drrahulbachute/transmission-systems/add-on-course-on-design-of-i-c-engine-components-and-3d-printing
+  📝 DTS Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/transmission-systems/assignments-question-bank
+
+BELT DRIVES, CHAIN DRIVES, CLUTCHES, BRAKES (transmission context):
+  📖 DTS Study Material → https://sites.google.com/view/drrahulbachute/transmission-systems/study-material
+  📝 DTS Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/transmission-systems/assignments-question-bank
+  📝 DTS Past SPPU Papers → https://sites.google.com/view/drrahulbachute/transmission-systems/past-sppu-question-papers
+
+SOLID MECHANICS (stress, strain, SFD/BMD, torsion):
+  📖 Solid Mechanics → https://sites.google.com/view/drrahulbachute/solid-mechanics
+  📖 Solved PYQs Unit-wise → https://sites.google.com/view/drrahulbachute/solid-mechanics/solved-pyqs-unit-wise
+  📖 Paper Solution 2024 → https://sites.google.com/view/drrahulbachute/solid-mechanics/paper-solution-solid-mechanics-2024-pattern
+
+BOLTED JOINTS, WELDED JOINTS, POWER SCREWS, COUPLINGS, CLUTCHES (DME context):
+  📖 DME Study Material → https://sites.google.com/view/drrahulbachute/machine-elements/study-material
+  📝 DME Assignments & Question Bank → https://sites.google.com/view/drrahulbachute/machine-elements/assignments-question-bank
+  📝 DME Past SPPU Papers → https://sites.google.com/view/drrahulbachute/machine-elements/past-sppu-question-papers`;
 
 /* ─────────────────────────────────────────
    STATE
@@ -640,9 +696,28 @@ function saveKey() {
   }
   err.style.display = 'none';
   GROQ_KEY = k;
+  try { localStorage.setItem('mechdesign_groq_key', k); } catch(e) {}
   document.getElementById('api-modal').style.display = 'none';
   document.getElementById('user-input').focus();
 }
+
+function clearKey() {
+  try { localStorage.removeItem('mechdesign_groq_key'); } catch(e) {}
+  GROQ_KEY = '';
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('api-modal').style.display = 'flex';
+}
+
+// Auto-load saved key on page load
+(function() {
+  try {
+    const saved = localStorage.getItem('mechdesign_groq_key');
+    if (saved && saved.length > 10) {
+      GROQ_KEY = saved;
+      document.getElementById('api-modal').style.display = 'none';
+    }
+  } catch(e) {}
+})();
 
 /* ─────────────────────────────────────────
    GROQ API CALL

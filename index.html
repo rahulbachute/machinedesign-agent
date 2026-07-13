@@ -653,28 +653,13 @@ BOLTED JOINTS, WELDED JOINTS, POWER SCREWS, COUPLINGS, CLUTCHES (DME context):
 /* ─────────────────────────────────────────
    STATE
 ───────────────────────────────────────── */
-// ⚠️ REPLACE BOTH PLACEHOLDERS BELOW WITH YOUR TWO GROQ KEYS BEFORE DEPLOYING.
-// See the note at the end of the chat reply for why these are visible
-// to anyone who views the page source.
-const GROQ_KEYS = [
-  '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',
-  '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'
-];
-let currentKeyIndex = 0;   // which key we try first on the next call
+// The Groq keys used to live here — they've been moved to a Cloudflare
+// Worker so they're never visible in this page's source. Set your
+// Worker's URL below (from Cloudflare dashboard → your Worker → the
+// workers.dev URL shown at the top of its Overview page).
+const PROXY_URL = 'https://mechdesign-ai-proxy.bachuterahul.workers.dev/';
 let history = [];   // [{role:'user'|'model', parts:[{text:'...'}]}]
 let busy = false;
-
-// Errors that mean "this key is out of quota/rate-limited right now" —
-// worth switching to the other key and retrying. Anything else (bad
-// request, model error, etc.) is not a key problem, so we don't retry.
-function isQuotaOrRateError(e) {
-  const lower = (e.message || '').toLowerCase();
-  return e.status === 429 ||
-    lower.includes('rate limit') ||
-    lower.includes('tokens per day') ||
-    lower.includes('(tpd)') ||
-    lower.includes('quota');
-}
 
 /* ─────────────────────────────────────────
    GOOGLE SITES iframe height resizer
@@ -694,16 +679,12 @@ setInterval(sendHeightToParent, 400);
 /* ─────────────────────────────────────────
    GROQ API CALL
 ───────────────────────────────────────── */
-// Makes one attempt against Groq with a specific key. Throws an Error
-// (with .status/.code set) on any non-OK response — never touches
-// `history`, so callGroq can retry cleanly with the other key.
-async function callGroqWithKey(key) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+async function callGroq(userText) {
+  history.push({ role: 'user', content: userText });
+
+  const res = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       max_tokens: 1200,
@@ -718,39 +699,14 @@ async function callGroqWithKey(key) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = err.error?.message || `API error ${res.status}`;
+    history.pop();
     const e = new Error(msg);
     e.status = res.status;
     e.code = err.error?.code || '';
     throw e;
   }
-  return res.json();
-}
 
-async function callGroq(userText) {
-  history.push({ role: 'user', content: userText });
-
-  let data;
-  try {
-    // Try whichever key worked last time first.
-    data = await callGroqWithKey(GROQ_KEYS[currentKeyIndex]);
-  } catch (firstErr) {
-    if (!isQuotaOrRateError(firstErr) || GROQ_KEYS.length < 2) {
-      history.pop();
-      throw firstErr;
-    }
-    // First key is out of quota — flip to the other key and retry
-    // the SAME request once, so the student sees no interruption.
-    const otherIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
-    try {
-      data = await callGroqWithKey(GROQ_KEYS[otherIndex]);
-      currentKeyIndex = otherIndex;   // stick with the working key next time
-    } catch (secondErr) {
-      history.pop();
-      // Both keys are exhausted/rate-limited — surface the second error.
-      throw secondErr;
-    }
-  }
-
+  const data = await res.json();
   const reply = data.choices?.[0]?.message?.content
     || 'I could not generate a response. Please try again.';
 

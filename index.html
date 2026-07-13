@@ -365,6 +365,33 @@ main {
   margin-bottom: 8px;
   text-transform: uppercase;
 }
+
+/* ── MARKDOWN TABLES ── */
+.md-table-wrap { overflow-x: auto; margin: 10px 0; }
+.md-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12.5px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,180,160,0.25);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.md-table th, .md-table td {
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  vertical-align: top;
+}
+.md-table th {
+  background: rgba(0,180,160,0.15);
+  color: var(--teal-2);
+  font-family: var(--font-h);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.md-table td { color: rgba(255,255,255,0.85); }
+.md-table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
 </style>
 </head>
 <body>
@@ -598,6 +625,8 @@ RESPONSE RULES:
     - Journal bearing: 📊 [Diagram: journal bearing sommerfeld]
     - Flywheel: 📊 [Diagram: flywheel design]
     Always insert the diagram tag right after introducing the concept, before the formula explanation.
+    - CRITICAL: If the current topic is not one of the 9 exact topics listed above (for example: theories of failure/Von Mises/Tresca/Rankine, gear trains, gearboxes, bevel/helical/worm gears, clutches, brakes, bolted/welded joints, power screws, couplings, crankshaft, connecting rod, Lame's cylinder), do NOT insert any diagram tag at all — not even one from a different topic that seems loosely related. There is no partial-credit diagram. Skip the 📊 line entirely and explain using prose and formulas only.
+    - NEVER write a diagram tag while also telling the student it "isn't directly relevant" or similar — if it isn't relevant, don't insert it, full stop.
 
 TOPIC → PORTAL RESOURCE MAPPING (always include ALL relevant links for the topic):
 
@@ -1054,6 +1083,39 @@ const DIAGRAMS = {
 
 const DIAGRAM_STOPWORDS = new Set(['diagram','diagrams','design','drawing','chart','figure','plot','sketch','schematic','curve','curves','of','and','the','with','for','equation']);
 
+// ── Markdown table → HTML table ──
+// Matches blocks of 2+ consecutive lines that look like "| a | b | c |".
+// Handles both a real "|---|---|" separator row and models that skip it
+// and go straight from header into data rows (both happen in practice).
+function mdTableToHtml(block) {
+  const lines = block.trim().split('\n').filter(l => l.trim().length);
+  if (lines.length < 2) return block;
+
+  const parseRow = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+  const isSeparator = line => /^\|?[\s:|-]+\|?$/.test(line.trim()) && line.includes('-');
+
+  const header = parseRow(lines[0]);
+  let dataLines = lines.slice(1);
+  if (dataLines.length && isSeparator(dataLines[0])) dataLines = dataLines.slice(1);
+  const rows = dataLines.filter(l => !isSeparator(l)).map(parseRow);
+
+  let html = '<div class="md-table-wrap"><table class="md-table"><thead><tr>';
+  header.forEach(h => html += `<th>${h}</th>`);
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr>';
+    r.forEach(c => html += `<td>${c}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function convertMarkdownTables(text) {
+  // A "table block" is 2+ consecutive lines that each start and end with |
+  return text.replace(/(^\|[^\n]*\|[ \t]*$\n?){2,}/gm, block => mdTableToHtml(block));
+}
+
 function normalizeDiagramKey(s) {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -1117,6 +1179,10 @@ function fmt(text) {
   text = text.replace(/```[\s\S]*?```/g, '');
 
   text = text.replace(/^(?!.*[A-Za-z]{3,})[\sx×\-+|.v^=#*\u2500-\u257F]{6,}$/gm, '');
+
+  // Convert markdown tables to real HTML tables before newlines get
+  // turned into <br> — table rows are still plain "\n"-separated here.
+  text = convertMarkdownTables(text);
 
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')

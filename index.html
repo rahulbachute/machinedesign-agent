@@ -482,7 +482,7 @@ main {
 
       <div class="welcome-card">
         <h2>🤖 Namaste! I'm MechDesign AI</h2>
-        <p>Your intelligent assistant for <strong style="color:var(--teal-2)">DME</strong>, <strong style="color:var(--teal-2)">DTS</strong> &amp; <strong style="color:var(--teal-2)">Engine Components</strong>. Powered by Groq · Llama 3.3 · Free AI</p>
+        <p>Your intelligent assistant for <strong style="color:var(--teal-2)">DME</strong>, <strong style="color:var(--teal-2)">DTS</strong> &amp; <strong style="color:var(--teal-2)">Engine Components</strong>. Powered by Groq · GPT-OSS 20B · Free AI</p>
         <div class="caps-grid">
           <div class="cap-item"><span class="cap-icon">📐</span>Step-by-step numericals (Given → Find → Formula → Result)</div>
           <div class="cap-item"><span class="cap-icon">🧠</span>Concept explanations with formulae and context</div>
@@ -715,7 +715,7 @@ async function callGroq(userText) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-20b',
       max_tokens: 1200,
       temperature: 0.4,
       messages: [

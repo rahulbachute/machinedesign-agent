@@ -710,10 +710,14 @@ setInterval(sendHeightToParent, 400);
 ───────────────────────────────────────── */
 async function callGroq(userText) {
   history.push({ role: 'user', content: userText });
+
   const recentHistory = history.slice(-2);
+
   const res = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b',
       max_tokens: 900,
@@ -726,20 +730,48 @@ async function callGroq(userText) {
   });
 
   if (!res.ok) {
+
+    // Try to read JSON returned by the Cloudflare Worker.
     const err = await res.json().catch(() => ({}));
-    const msg = err.error?.message || `API error ${res.status}`;
+
+    const msg =
+      err.error?.message ||
+      err.message ||
+      `API error ${res.status}`;
+
     history.pop();
+
     const e = new Error(msg);
+
+    // Preserve HTTP status.
     e.status = res.status;
-    e.code = err.error?.code || '';
+
+    // Preserve Groq error code.
+    e.code = err.error?.code || err.code || '';
+
+    // Preserve rate-limit information forwarded by the Worker.
+    e.retryAfter = res.headers.get('Retry-After');
+
+    e.remainingTokens =
+      res.headers.get('X-Groq-Remaining-Tokens');
+
+    e.resetTokens =
+      res.headers.get('X-Groq-Reset-Tokens');
+
     throw e;
   }
 
   const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content
-    || 'I could not generate a response. Please try again.';
 
-  history.push({ role: 'assistant', content: reply });
+  const reply =
+    data.choices?.[0]?.message?.content ||
+    'I could not generate a response. Please try again.';
+
+  history.push({
+    role: 'assistant',
+    content: reply
+  });
+
   return reply;
 }
 
@@ -1239,43 +1271,204 @@ function showTyping() {
 }
 
 function friendlyErrorMessage(e) {
-  const raw = e.message || '';
+
+  const raw = String(e?.message || '');
   const lower = raw.toLowerCase();
 
-  function extractWait(text) {
-    const m = text.match(/try again in\s*((?:\d+h)?\s*(?:\d+m)?\s*(?:\d+(?:\.\d+)?s)?)/i);
-    if (!m || !m[1]) return null;
-    const dur = m[1];
-    const h = dur.match(/(\d+)h/);
-    const min = dur.match(/(\d+)m(?!s)/);
-    const sec = dur.match(/(\d+)(?:\.\d+)?s/);
+  // Convert retry information into a student-friendly duration.
+  function formatDuration(value) {
+
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    let seconds = Number(value);
+
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return null;
+    }
+
+    seconds = Math.ceil(seconds);
+
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+
+    const minutes = Math.floor(seconds / 60);
+    seconds %= 60;
+
     const parts = [];
-    if (h) parts.push(`${h[1]} hour${h[1] === '1' ? '' : 's'}`);
-    if (min) parts.push(`${min[1]} minute${min[1] === '1' ? '' : 's'}`);
-    if (!h && !min && sec) parts.push(`${sec[1]} second${sec[1] === '1' ? '' : 's'}`);
-    return parts.length ? parts.join(' ') : null;
+
+    if (hours > 0) {
+      parts.push(
+        `${hours} hour${hours === 1 ? '' : 's'}`
+      );
+    }
+
+    if (minutes > 0) {
+      parts.push(
+        `${minutes} minute${minutes === 1 ? '' : 's'}`
+      );
+    }
+
+    if (seconds > 0 || parts.length === 0) {
+      parts.push(
+        `${seconds} second${seconds === 1 ? '' : 's'}`
+      );
+    }
+
+    return parts.join(' ');
   }
 
-  if (lower.includes('tokens per day') || lower.includes('(tpd)') || lower.includes('tpd)')) {
-    const wait = extractWait(raw);
-    return `⏳ **Today's AI usage limit has been reached.**<br>` +
-      `The free Groq tier resets this once every 24 hours${wait ? ` — it should be available again in about **${wait}**` : ''}.<br>` +
-      `Please try again later, or come back tomorrow.`;
+  function extractWait(text) {
+
+    // "try again in 28s" / "try again in 28 seconds"
+    let match = text.match(
+      /try again in\s*(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds)\b/i
+    );
+
+    if (match) {
+      return formatDuration(Number(match[1]));
+    }
+
+    // "try again in 1m 20s" / "try again in 1 minute 20 seconds"
+    match = text.match(
+      /try again in\s*(?:(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\s*)?(?:(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)\s*)?(?:(\d+(?:\.\d+)?)\s*(?:s|sec|secs|second|seconds))?/i
+    );
+
+    if (match && (match[1] || match[2] || match[3])) {
+
+      const hours = Number(match[1] || 0);
+      const minutes = Number(match[2] || 0);
+      const seconds = Number(match[3] || 0);
+
+      return formatDuration(
+        hours * 3600 +
+        minutes * 60 +
+        seconds
+      );
+    }
+
+    // "retry after 28 seconds"
+    match = text.match(
+      /retry(?:-|\s*)after\s*(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds)\b/i
+    );
+
+    if (match) {
+      return formatDuration(Number(match[1]));
+    }
+
+    return null;
   }
 
-  if (e.status === 429 || lower.includes('rate limit')) {
-    const wait = extractWait(raw);
-    return `⏳ **Too many requests right now.**<br>` +
-      `Please wait${wait ? ` about **${wait}**` : ' a little while'} and try again.`;
+  // Prefer the Retry-After HTTP header supplied by the Worker.
+  let wait = null;
+
+  if (e?.retryAfter) {
+
+    const retryValue = String(e.retryAfter).trim();
+
+    // Groq normally provides a number of seconds.
+    if (/^\d+(?:\.\d+)?$/.test(retryValue)) {
+      wait = formatDuration(Number(retryValue));
+    } else {
+      wait = extractWait(retryValue);
+    }
   }
 
-  if (e.status === 401 || lower.includes('invalid api key') || lower.includes('incorrect api key')) {
-    return `🔑 **The AI service key on this page isn't valid.**<br>` +
-      `Please let Dr. Bachute know so it can be updated.`;
+  // Fall back to parsing the error message.
+  if (!wait) {
+    wait = extractWait(raw);
   }
 
-  return `⚠️ **Something went wrong contacting the AI service.**<br>` +
-    `${raw}<br>Please try again in a moment.`;
+  // Token-per-day limit
+  if (
+    lower.includes('tokens per day') ||
+    lower.includes('(tpd)') ||
+    lower.includes('tpd') ||
+    lower.includes('daily limit')
+  ) {
+
+    return (
+      `⏳ <strong>Today's AI usage limit has been reached.</strong><br>` +
+      `The free Groq service has a daily usage limit.` +
+      `${wait ? ` It should be available again in about <strong>${wait}</strong>.` : ''}<br>` +
+      `Please try again later.`
+    );
+  }
+
+  // TPM / rate-limit error
+  if (
+    e?.status === 429 ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('tokens per minute') ||
+    lower.includes('(tpm)') ||
+    lower.includes('tpm:') ||
+    (lower.includes('requested') && lower.includes('limit'))
+  ) {
+
+    return (
+      `⏳ <strong>AI service is temporarily rate-limited.</strong><br>` +
+      `${wait
+        ? `Please wait about <strong>${wait}</strong> and try again.`
+        : `Please wait a little while and try again.`}` +
+      `<br><span style="color:var(--muted);font-size:11px">` +
+      `This is a temporary free-tier usage limit, not an error in your question.` +
+      `</span>`
+    );
+  }
+
+  // Invalid API key
+  if (
+    e?.status === 401 ||
+    lower.includes('invalid api key') ||
+    lower.includes('incorrect api key') ||
+    lower.includes('authentication')
+  ) {
+
+    return (
+      `🔑 <strong>AI service authentication problem.</strong><br>` +
+      `Please inform Dr. Bachute so the AI service configuration can be checked.`
+    );
+  }
+
+  // Model not found / deprecated model
+  if (
+    lower.includes('model') &&
+    (
+      lower.includes('does not exist') ||
+      lower.includes('not found') ||
+      lower.includes('deprecated') ||
+      lower.includes('does not have access')
+    )
+  ) {
+
+    return (
+      `⚠️ <strong>AI model configuration problem.</strong><br>` +
+      `Please inform Dr. Bachute so the AI service configuration can be updated.`
+    );
+  }
+
+  // Request too large / context problem
+  if (
+    lower.includes('request too large') ||
+    lower.includes('message size') ||
+    lower.includes('context length') ||
+    lower.includes('maximum context')
+  ) {
+
+    return (
+      `⚠️ <strong>The request was too large for the AI service.</strong><br>` +
+      `Please try the question again in a moment.`
+    );
+  }
+
+  // Generic API failure
+  return (
+    `⚠️ <strong>Something went wrong contacting the AI service.</strong><br>` +
+    `${raw || 'The AI service did not return a response.'}` +
+    `<br>Please try again in a moment.`
+  );
 }
 
 async function sendMessage() {

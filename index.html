@@ -710,7 +710,7 @@ setInterval(sendHeightToParent, 400);
 ───────────────────────────────────────── */
 async function callGroq(userText) {
   history.push({ role: 'user', content: userText });
-
+  const recentHistory = history.slice(-6);
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -720,7 +720,7 @@ async function callGroq(userText) {
       temperature: 0.4,
       messages: [
         { role: 'system', content: SYSTEM },
-        ...history
+        ...recentHistory
       ]
     })
   });

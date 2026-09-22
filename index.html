@@ -761,18 +761,28 @@ async function callGroq(userText) {
     throw e;
   }
 
-  const data = await res.json();
+const data = await res.json();
 
-  const reply =
-    data.choices?.[0]?.message?.content ||
-    'I could not generate a response. Please try again.';
+const reply = data.choices?.[0]?.message?.content?.trim();
 
-  history.push({
-    role: 'assistant',
-    content: reply
-  });
+if (!reply) {
+  const finishReason = data.choices?.[0]?.finish_reason || '';
+  const apiError = data.error?.message || '';
+  
+  const detail =
+    apiError ||
+    (finishReason
+      ? `The AI model returned no answer (finish reason: ${finishReason}).`
+      : 'The AI model returned an empty response.');
 
-  return reply;
+  const e = new Error(detail);
+  e.status = res.status;
+  e.code = data.error?.code || '';
+  throw e;
+}
+
+history.push({ role: 'assistant', content: reply });
+return reply;
 }
 
 /* ─────────────────────────────────────────
